@@ -1,4 +1,5 @@
 import png
+import os
 
 ######FOREGROUND COLORS#####
 BLACK = 30
@@ -72,34 +73,39 @@ def automata(func, rows, colors=(GREEN + BACKGROUND, YELLOW + BACKGROUND), defau
 		last_row = current_row[:]
 	return current_row
 
-def automata_(func, rows, ic=None):
-	if ic is None:
-		last_row = [0]*(2*rows+1)
-		last_row[(2*rows+1)/2] = 1
-	else:
-		side = [0]*(2*row + 1) / 2
-		last_row = side + list(ic) + side
+def stretch(arr, n):
+        return sum([[i]*n for i in arr], [])
+
+def automata_(func, rows, scale):
+        last_row = [0]*(2*rows+1)
+        last_row[(2*rows+1)/2] = 1
 	current_row = last_row[:]
 	d = len(current_row)-1
-	yield current_row
+        stretched = stretch(current_row, scale)
+	for _ in range(scale):
+                yield stretched
 	for _ in range(rows):
 		for i, q in enumerate(last_row):
 			p = last_row[i-1]
 			r = last_row[(i+1)%d]
 			current_row[i] = func(p,q,r)
-		yield current_row
+                stretched = stretch(current_row, scale)
+                for _ in range(scale):
+                        yield stretched
 		last_row = current_row[:]
 
-def make_pngs(rows, cp=None):
+def make_pngs(rows, scale):
+        os.mkdir('pngs')
+        path = lambda fname: os.path.join('pngs', fname)
 	for rule in RULE:
-		pic = open(rule.__name__+".png", 'wb')
-		if cp is None:
-			writer = png.Writer(width=2*rows+1, height=rows+1, greyscale=True, bitdepth=1)
-			writer.write(pic, automata_(rule, rows))
+                print 'processing {}'.format(rule.__name__)
+		pic = open(path(rule.__name__+".png"), 'wb')
+                writer = png.Writer(width=scale*(2*rows+1), height=scale*(rows+1), greyscale=True, bitdepth=1)
+                writer.write(pic, automata_(rule, rows, scale))
 		pic.close()
 
 def pretty(list_, colormap, default=None):
 	return ''.join(color(colormap[char]).format(char if default is None else default) for char in list_)
 	
 if __name__=="__main__":
-	make_pngs(40)
+	make_pngs(100, 10)
